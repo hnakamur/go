@@ -182,3 +182,13 @@ func BenchmarkPrintln(b *testing.B) {
 		l.Println(testString)
 	}
 }
+
+func BenchmarkPrintlnMicoroseconds(b *testing.B) {
+	const testString = "test"
+	var buf bytes.Buffer
+	l := New(&buf, "", LstdFlags|Lmicroseconds)
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		l.Println(testString)
+	}
+}
