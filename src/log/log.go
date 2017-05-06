@@ -89,6 +89,23 @@ func itoa(buf *[]byte, i int, wid int) {
 	*buf = append(*buf, b[bp:]...)
 }
 
+// Cheap integer to fixed-width decimal ASCII with zero padding.
+// It is user's responsibility to pass a buffer with enough length.
+// Precondition: len(buf) >= wid && wid > 0
+func itoaPad(buf []byte, i int, wid int) {
+	// Assemble decimal in reverse order.
+	bp := wid - 1
+	for i >= 10 || wid > 1 {
+		wid--
+		q := i / 10
+		buf[bp] = byte('0' + i - q*10)
+		bp--
+		i = q
+	}
+	// i < 10
+	buf[bp] = byte('0' + i)
+}
+
 func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 	*buf = append(*buf, l.prefix...)
 	if l.flag&LUTC != 0 {
@@ -97,23 +114,23 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
 		if l.flag&Ldate != 0 {
 			year, month, day := t.Date()
-			itoa(buf, year, 4)
-			*buf = append(*buf, '/')
-			itoa(buf, int(month), 2)
-			*buf = append(*buf, '/')
-			itoa(buf, day, 2)
-			*buf = append(*buf, ' ')
+			ymd := []byte("yyyy/mm/dd ")
+			itoaPad(ymd[:4], year, 4)
+			itoaPad(ymd[5:7], int(month), 2)
+			itoaPad(ymd[8:10], day, 2)
+			*buf = append(*buf, ymd...)
 		}
 		if l.flag&(Ltime|Lmicroseconds) != 0 {
 			hour, min, sec := t.Clock()
-			itoa(buf, hour, 2)
-			*buf = append(*buf, ':')
-			itoa(buf, min, 2)
-			*buf = append(*buf, ':')
-			itoa(buf, sec, 2)
+			hms := []byte("HH:MM:SS")
+			itoaPad(hms[:2], hour, 2)
+			itoaPad(hms[3:5], min, 2)
+			itoaPad(hms[6:8], sec, 2)
+			*buf = append(*buf, hms...)
 			if l.flag&Lmicroseconds != 0 {
-				*buf = append(*buf, '.')
-				itoa(buf, t.Nanosecond()/1e3, 6)
+				ms := []byte(".ssssss")
+				itoaPad(ms[1:7], t.Nanosecond()/1e3, 6)
+				*buf = append(*buf, ms...)
 			}
 			*buf = append(*buf, ' ')
 		}
